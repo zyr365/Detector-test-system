@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.28307.779
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ThzDataProcess", "ThzDataProcess\ThzDataProcess.csproj", "{AAD8DEFD-99C1-4B27-9536-1A9CF154E2E9}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{AAD8DEFD-99C1-4B27-9536-1A9CF154E2E9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AAD8DEFD-99C1-4B27-9536-1A9CF154E2E9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AAD8DEFD-99C1-4B27-9536-1A9CF154E2E9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AAD8DEFD-99C1-4B27-9536-1A9CF154E2E9}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {45A244BE-E33D-4B33-887B-6ECB4FB97630}
+	EndGlobalSection
+EndGlobal

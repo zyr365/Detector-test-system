@@ -1,0 +1,25 @@
+﻿<?xml version="1.0" encoding="UTF-8" ?>
+<cams>
+    <cam camid="1">
+        <HostIPAddress>192.168.1.119</HostIPAddress>
+        <CameraIPAddress1>192.168.1.61</CameraIPAddress1>
+        <CameraIPAddress2>192.168.1.64</CameraIPAddress2>
+       <DeviceIPAddress1>192.168.1.120</DeviceIPAddress1>
+       <DeviceIPAddress2>192.168.1.110</DeviceIPAddress2>
+        <IPPort>8000</IPPort>
+        <EndPort>8008</EndPort>
+        <LocalPort>8009</LocalPort>
+        <Enable>true</Enable>
+        <HumanThrd>35</HumanThrd>
+        <!--  IPAddress 
+            192.168.1.64    cam1    奇台
+            192.168.1.61    cam2    偶台
+        
+                DeviceIP      EndPort  LocalPort
+            192.168.1.110,   8008,     8008         奇台
+            192.168.1.120,   8008,     8009         偶台
+            
+            HumanThrd  设置判断人体阈值
+            -->
+    </cam>
+</cams>

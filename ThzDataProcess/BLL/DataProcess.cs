@@ -12,6 +12,8 @@ using System.Diagnostics;
 using System.Drawing;
 
 using ThzDataProcess;
+using System.Windows.Forms;
+
 
 namespace BLL
 {
@@ -182,9 +184,13 @@ namespace BLL
         object ThreadLock = new object();                           //线程锁
 
         public Action<Bitmap, string[], double[], bool, bool> ShowEvent;
+        public Action<int, int, string> ShowEvent_zyr1;
+        public Action<string> ShowEvent_zyr2;
+        public Action<int,Double> ShowEvent_zyr3;
+        //MainForm mf = new MainForm();
 
 
-
+        DataCalculate dc = new DataCalculate();
 
 
         #region 线程开启
@@ -203,7 +209,7 @@ namespace BLL
         {
             StartDataRevThread();
             StartDataProcessThread();
-            //StartShowThread();
+            StartShowThread();
         }
 
         private void StartShowThread()
@@ -247,15 +253,22 @@ namespace BLL
             localPort = localport;//8008
         }
 
+
+        /*Thread t = new Thread(Start);
+           t.Priority = ThreadPriority.Highest;
+           t.Start();*/
+
         #region 数据接收线程
         /// <summary>
         /// 数据接收线程
         /// </summary>
         private void DataRevThread()
         {
+            
             try
             {
                 //IPAddress remoteIP = IPAddress.Parse("255.255.255.255");                                      //广播
+
 
                 UdpClient client = new UdpClient(new IPEndPoint(IPAddress.Parse("192.168.1.119"), 8009));   //本机端口 一般UdpClient client = new UdpClient();
                 IPAddress remoteIP = IPAddress.Parse(deviceIp);                                                   //远程IP
@@ -265,37 +278,45 @@ namespace BLL
                 //ARP触发
                 client.Send(new byte[] { 00, 11 }, 2, endpoint);   //发送 00 ,11有何作用？？
 
-               //Command.CommandUp_v1(6);
+
 
                 while (true)
-                {
-
-                   // MainForm f1 = new MainForm();
-                   //f1.ShowThread();
-
-
-                    List<Byte[]> Taskbuff = new List<Byte[]>();
-                    for (int i = 0; i < 21; i++)                             //为什么是21？
                     {
+                      // MainForm f1 = new MainForm();
+                      //f1.ShowThread("123");
+                      List<Byte[]> Taskbuff = new List<Byte[]>();
+                          for (int i = 0; i < 25; i++)                             //为什么是21？
+                        {
+
+                            Byte[] recv = client.Receive(ref endpoint);
+                            // MainForm f1 = new MainForm();
+                            // f1.ShowThread();
+                            Taskbuff.Add(recv);
+
+
                        
-                        Byte[] recv = client.Receive(ref endpoint);
-                       // MainForm f1 = new MainForm();
-                       // f1.ShowThread();
-                        Taskbuff.Add(recv);                   
+                        DataShow_v1(recv, Environment.CurrentDirectory + "\\bin", "mydata.bin");
+
+
+
+                        // writerFile(recv, Environment.CurrentDirectory + "\\bin\\mydata.bin");
+
                     }
                     // 任务队列为临界资源，需要锁 
                     lock (ThreadLock)
-                    {
-                        DataQueue.Enqueue(Taskbuff); //Queue<List<Byte[]>> DataQueue = new Queue<List<Byte[]>>();  在队列的末端添加元素
+                        {
+                            DataQueue.Enqueue(Taskbuff); //Queue<List<Byte[]>> DataQueue = new Queue<List<Byte[]>>();  在队列的末端添加元素
+
+                        }
+                        // 每添加一个任务，信号量加1
+                        TaskSemaphore.Release(1);
+
+                        //ChangeProducerText(String.Format("Consumer 1 take Task {0}\r\n", a));
+
 
                     }
-                    // 每添加一个任务，信号量加1
-                    TaskSemaphore.Release(1);   
+                
 
-                    //ChangeProducerText(String.Format("Consumer 1 take Task {0}\r\n", a));
-
-
-                }
                 //client.Close();
             }
             catch (Exception ex)
@@ -305,6 +326,105 @@ namespace BLL
                 Logger(fileName, content);
             }
 
+        }
+        #endregion
+
+
+        #region 数据显示
+        private void DataShow_v1(Byte[] recv,string filePath,string fileName)
+        {
+            if (!Directory.Exists(filePath))
+                Directory.CreateDirectory(filePath);
+            if (!File.Exists(filePath+ "\\"+fileName))
+                File.Create(filePath + "\\"+fileName).Close(); //.Close 很关键，不然会有问题
+            FileStream fs = new FileStream(filePath + "\\"+fileName, FileMode.Append, FileAccess.Write);
+            fs.Write(recv, 0, recv.Length);
+            fs.Close();
+            fs.Dispose();
+        }
+            private void DataShow(Byte[] recv)
+        {
+            //MainForm f1 = new MainForm();
+            // ShowMessage(f1.richTextBox1, "开始显示数据");
+            //  MainForm f1 = new MainForm();
+            //f1.ShowThread("123");
+            /*  int nLength = recv.Length;//字节数组长度
+              string sByte = "";
+              if (nLength > 0)
+              {
+                  sByte = Convert.ToString(recv[0], 16);//转换成16进制
+                  if (nLength > 1)
+                  {
+                      for (int k = 1; k < recv.Length; k++)
+                      {
+                          sByte += ",";//用逗号隔开
+                          sByte += Convert.ToString(recv[k], 16);//转换成16进制
+
+                      }
+                  }
+              }
+              if (!Directory.Exists(Environment.CurrentDirectory + "\\bin"))
+                  Directory.CreateDirectory(Environment.CurrentDirectory + "\\bin");
+
+              //Environment.CurrentDirectory + "\\" + DateTime.Now.ToString("HHmmssfff") + "bin.txt"
+              // writerFile(strToToHexByte(sNeed.ToString().Substring(0)), "ZHEN\\Port" + localPort + "_Frame" + (CountNum) % 10000 + ".bin");
+              using (StreamWriter file = new StreamWriter(Environment.CurrentDirectory + "\\bin\\" + DateTime.Now.ToString("HHmmss") + ".txt", true))
+              {
+                  file.WriteLine(sByte);
+                  file.WriteLine("\r\n");
+
+              }*/
+
+            //if (!Directory.Exists(Environment.CurrentDirectory + "\\bin"))
+            //    Directory.CreateDirectory(Environment.CurrentDirectory + "\\bin");
+
+            //Stream flstr = new FileStream(Path.GetDirectoryName(Application.ExecutablePath))
+            // BinaryWriter sw = new  BinaryWriter(new FileStream(Environment.CurrentDirectory + "\\bin\\mydata.bin", FileMode.Append, FileAccess.ReadWrite)); //创建文件  bin目录下
+            //  sw.Write(recv);
+            //  sw.Close();
+
+            //writerFile(recv, Environment.CurrentDirectory + "\\bin\\mydata.bin");
+            int nLength = recv.Length;//字节数组长度
+             string sByte = "";
+             if (nLength > 0)
+             {
+                 sByte = Convert.ToString(recv[0], 16);//转换成16进制
+                 if (nLength > 1)
+                 {
+                     for (int i = 1; i < recv.Length; i++)
+                     {
+                         sByte += ",";//用逗号隔开
+                         sByte += Convert.ToString(recv[i], 16);//转换成16进制
+
+                     }
+                 }
+             }
+            if (!File.Exists(Environment.CurrentDirectory +"\\bin.txt"))
+                File.Create(Environment.CurrentDirectory + "\\bin.txt");
+            //Environment.CurrentDirectory + "\\" + DateTime.Now.ToString("HHmmssfff") + "bin.txt"
+            using (StreamWriter file = new StreamWriter(Environment.CurrentDirectory + "\\bin.txt", true))
+            {
+                file.WriteLine(DateTime.Now.ToString("HHmmssfff")+sByte);
+
+            }
+
+            //File.WriteAllBytes(Environment.CurrentDirectory+"bin.txt", recv);
+            //ShowMessage(f1.richTextBox1, sByte);
+
+        }
+        // 向RichTextBox中添加文本
+        delegate void ShowMessageDelegate(RichTextBox txtbox, string message);
+        private void ShowMessage(RichTextBox txtbox, string message)
+        {
+            if (txtbox.InvokeRequired)
+            {
+                ShowMessageDelegate showMessageDelegate = ShowMessage;
+                txtbox.Invoke(showMessageDelegate, new object[] { txtbox, message });
+            }
+            else
+            {
+                txtbox.Text += message + "\r\n";
+            }
         }
         #endregion
 
@@ -343,10 +463,11 @@ namespace BLL
                     elapsetime.Restart();//计时开始
                     //数据解析解码
                     //DataDecode(GetTask, ref listBuff, ref thzdata);
+                    
+
                     DataDecode_v1(GetTask, ref listBuff, ref thzdata);
                     //Console.WriteLine("123");
-                    MainForm f1 = new MainForm();
-                    f1.ShowThread();
+
 
                     elapsetime.Stop();//计时结束
                     duration[0] = elapsetime.ElapsedMilliseconds.ToString("000");
@@ -494,7 +615,7 @@ namespace BLL
                     //    Directory.CreateDirectory("ZHEN");
                     //writerFile(strToToHexByte(sNeed.ToString().Substring(0)), "ZHEN\\Port" + localPort + "_Frame" + (CountNum) % 10000 + ".bin");
                     CountNum++;
-                    frame.Init(sNeed.ToString());
+                    frame.Init(sNeed.ToString());//？？？
                     //DecodeFrame(sNeed, ref frame, indexHead, indexTair); 
 
                     sNeed.Clear();
@@ -514,9 +635,9 @@ namespace BLL
         /// <param name="frame">输出PartData</param>
         /// <param name="FrameLength">FrameLength</param>
         /// <param name="PackageNum">PackageNum</param>
-        void DataDecode_v1(List<Byte[]> GetTask, ref List<Byte[]> listBuff, ref THZData frame)
+        void DataDecode_v1(List<Byte[]> GetTask, ref List<Byte[]> listBuff, ref THZData frame)   //ref作用?
         {
-            int PackageNum = 21;
+            int PackageNum = 25;
             //if (listBuff.Count >= 100)
             //{
             //    listBuff.Clear();
@@ -529,19 +650,24 @@ namespace BLL
 
             GetTask.AddRange(listBuff);
             listBuff.Clear();
+           
 
-            foreach (var item in GetTask.OrderBy(s => 256 * s[6] + s[7]).GroupBy(s => 256 * 256 * 256 * s[2] + 256 * 256 * s[3] + 256 * s[4] + s[5])) //看不懂
+            foreach (var item in GetTask.OrderBy(s => 256 * s[6] + s[7]).GroupBy(s => 256 * 256 * 256 * s[2] + 256 * 256 * s[3] + 256 * s[4] + s[5])) //按照包排序、按照帧分组，每次取出一帧
             {
-                PackageNum = 256 * item.ToList()[0][0] + item.ToList()[0][1];
-                if (item.Count() == PackageNum)
+
+                PackageNum = 256 * item.ToList()[0][0] + item.ToList()[0][1];//获取一帧前两个字节的值，即单帧包数
+                if (item.Count() == PackageNum)//如果一帧的包数量和PackageNum相等则是一个完整的包
                 {
 
-                    var Zhendata = item.OrderBy(s => s[6] * 256 + s[7]).ToList();
+                    var Zhendata = item.OrderBy(s => s[6] * 256 + s[7]).ToList();//一帧数据按照包排序后存放到Zhendata
 
-                    if (Zhendata[0].Count() != 1420)
+                    if (Zhendata[0].Count() != 1420)//第一包不是1420则退出
                         continue;
 
-                    foreach (Byte[] match in Zhendata)
+                    dc.tempartureData_zyr(Zhendata, ShowEvent_zyr2);
+                    dc.adDataCaculate_zyr(Zhendata, ShowEvent_zyr1,ShowEvent_zyr3);
+
+                    foreach (Byte[] match in Zhendata)  //每次取出一个包也就是1420字节，取一帧的数据
                         sNeed.Append(BitConverter.ToString(match).Replace("-", "").Substring(20).ToUpper());
                     //if (!Directory.Exists("ZHEN"))
                     //    Directory.CreateDirectory("ZHEN");
@@ -559,12 +685,258 @@ namespace BLL
             }
 
         }
+        void DataDecode_v2(List<Byte[]> GetTask, ref List<Byte[]> listBuff, ref THZData frame)
+        {
+            int PackageNum = 25;
+            //int ChannelCount = 36;
+            //int SampleCount = 473;
+     
+            listBuff.RemoveAll(s => s.Count() < 1000);
+
+            StringBuilder sNeed = new StringBuilder();
+
+            GetTask.AddRange(listBuff);
+            listBuff.Clear();
+
+            foreach (var item in GetTask.OrderBy(s => 256 * s[6] + s[7]).GroupBy(s => 256 * 256 * 256 * s[2] + 256 * 256 * s[3] + 256 * s[4] + s[5])) //按照包排序、按照帧分组
+            {
+                PackageNum = 256 * item.ToList()[0][0] + item.ToList()[0][1];
+                if (item.Count() == PackageNum)
+                {
+
+                    var Zhendata = item.OrderBy(s => s[6] * 256 + s[7]).ToList();
+
+                    if (Zhendata[0].Count() != 1420)
+                        continue;
+
+                    /*mycode*/
+                    /* List<Byte> frameByteData = new List<Byte>();
+                     double[] ChannelData = new double[438] ;
+                     double avg = 0, Variance;
+                     foreach (Byte[] Package in Zhendata)
+                         foreach (Byte byt in Package)
+                             frameByteData.Add(byt);
+                     MessageBox.Show(frameByteData.Count().ToString());
+                     ChannelCount = 256 * item.ToList()[0][26] + item.ToList()[0][27];
+                     SampleCount = 256 * item.ToList()[0][28] + item.ToList()[0][29];
+                     for (int i = 0; i < ChannelCount; i++)    // 36
+                     {
+                         for (int j = 0; j < SampleCount; j++)  // 438
+                             ChannelData[j]= frameByteData[j * 74 + 51+i] * 256 + frameByteData[j * 74 + 52+i];
+                         avg = Var(ChannelData);
+                         Variance=ChannelData.Average();
+                         strWrite(ChannelData+"--"+avg+"--"+Variance, Environment.CurrentDirectory + "\\bin","ad.txt");
+
+                     }*/
+
+                    
+
+
+                    foreach (Byte[] match in Zhendata)
+                        sNeed.Append(BitConverter.ToString(match).Replace("-", "").Substring(20).ToUpper());
+
+                    strToToHexByte(sNeed.ToString().Substring(0));
+
+
+                    //if (!Directory.Exists("ZHEN"))
+                    //    Directory.CreateDirectory("ZHEN");
+                    writerFile(strToToHexByte(sNeed.ToString().Substring(0)), "ZHEN\\Port" + localPort + "_Frame" + (CountNum) % 10000 + ".bin");
+                    CountNum++;
+                    frame.Init(sNeed.ToString());
+                    //DecodeFrame(sNeed, ref frame, indexHead, indexTair); 
+
+                    sNeed.Clear();
+                }
+                else
+                {
+                    listBuff.AddRange(item.ToList());
+                }
+            }
+
+        }
+
+
+        /* public void callBack_zyr1(int row, int column, string str)
+         {
+
+            ShowEvent_zyr1(row, column, str);
+          }
+     public void callBack_zyr2(string str)
+     {
+
+         ShowEvent_zyr2(str);
+     }*/
+        #region mycode_zyr
+        // DataProcess dp = null;
+        public void tempartureData_zyr(List<byte[]> Zhendata)
+        {
+            StringBuilder sNeed = new StringBuilder();
+
+            foreach (Byte[] match in Zhendata)
+                sNeed.Append(BitConverter.ToString(match).Replace("-", "").Substring(20).ToUpper());
+            double[] temparture = GetTemparture_zyr(sNeed.ToString());
+            // mf.ShowlbDevTem(string.Format("设备温度：\nT1:{0:N}°\nT2:{1:N}°\nT3:{2:N}°\nT4:{3:N}°", temparture[0], temparture[1], temparture[2], temparture[3]));
+            ShowEvent_zyr2(string.Format("设备温度：\nT1:{0:N}°\nT2:{1:N}°\nT3:{2:N}°\nT4:{3:N}°", temparture[0], temparture[1], temparture[2], temparture[3]));
+           // dp.callBack_zyr2(string.Format("设备温度：\nT1:{0:N}°\nT2:{1:N}°\nT3:{2:N}°\nT4:{3:N}°", temparture[0], temparture[1], temparture[2], temparture[3]));
+            sNeed.Clear();
+            foreach (var tem in temparture)
+                sNeed.Append(tem + "***");
+            strWrite_zyr(sNeed.ToString(), Environment.CurrentDirectory + "\\bin", "tempartureData.txt");
+            sNeed.Clear();
+
+
+        }
+
+        public double[] GetTemparture_zyr(string str)
+        {
+            string tepStr = str.Substring(20 * 2, 8 * 2);
+            double[] Temparture = new double[4];
+            if (tepStr == null)
+                return Temparture;
+            byte[] Wen = DataProcess.strToToHexByte(tepStr);
+            if ((Wen[0] & 0xf0) >> 4 == 15)
+                Temparture[0] = -(~Wen[1] + 1 + 256.0 * ~Wen[0]) / 16;
+            else
+                Temparture[0] = (Wen[1] + 256.0 * Wen[0]) / 16;
+
+            if ((Wen[2] & 0xf0) >> 4 == 15)
+                Temparture[1] = -(~Wen[3] + 1 + 256.0 * ~Wen[2]) / 16;
+            else
+                Temparture[1] = (Wen[3] + 256.0 * Wen[2]) / 16;
+
+            if ((Wen[4] & 0xf0) >> 4 == 15)
+                Temparture[2] = -(~Wen[5] + 1 + 256.0 * ~Wen[4]) / 16;
+            else
+                Temparture[2] = (Wen[5] + 256.0 * Wen[4]) / 16;
+
+            if ((Wen[6] & 0xf0) >> 4 == 15)
+                Temparture[3] = -(~Wen[7] + 1 + 256.0 * ~Wen[6]) / 16;
+            else
+                Temparture[3] = (Wen[7] + 256.0 * Wen[6]) / 16;
+            return Temparture;
+        }
+        int zhenRows = 0;
+        public void adDataCaculate_zyr(List<byte[]> Zhendata)
+        {
+            byte[] byteData = new byte[35250];//1410*25
+            int count1 = 0, count2 = 0;
+            StringBuilder sNeed = new StringBuilder();
+            MainForm mf = new MainForm();
+
+            foreach (Byte[] Package in Zhendata)
+            {
+                count1 = 0;
+                foreach (byte byt in Package)
+                {
+                    if (count1 >= 20)   //跳过第一个数
+                    {
+
+                        byteData[count2] = byt;
+                        count2++;
+
+                    }
+                    count1++;
+                }
+            }
+            // Console.ReadKey();
+            double[] channel = new double[473];
+            double variance = 0.0, average = 0.0;
+            for (int i = 0; i < 36; i++)
+            {
+                for (int j = 0; j < 473; j++)
+                {
+                    byte bigByte = Convert.ToByte(byteData[j * 74 + i * 2].ToString("X"), 16);
+                    if ((bigByte & 0xf0) >> 4 == 15)
+                        channel[j] = -(~byteData[j * 74 + i * 2 + 30] + 1 + 256.0 * ~byteData[j * 74 + i * 2 + 31]) / 8192.0 * 10.0;//2^12 =4096
+                    else
+                        channel[j] = (byteData[j * 74 + i * 2 + 30] + 256.0 * ~byteData[j * 74 + i * 2 + 31]) / 8192.0 * 10.0;
+                    sNeed.Append(channel[j] + ",");
+                }
+                variance = Var_zyr(channel);
+                //mf.dataShow(zhenRows, 2 * i + 1, variance.ToString());
+                ShowEvent_zyr1(zhenRows, 2 * i + 1, variance.ToString());
+                //dp.callBack_zyr1(zhenRows, 2 * i + 1, variance.ToString());
+                sNeed.Append("***variance:" + variance + "***average:");
+                average = channel.Average();
+                // mf.dataShow(zhenRows, 2 * i , average.ToString());
+                 ShowEvent_zyr1(zhenRows, 2 * i, average.ToString());
+                //dp.callBack_zyr1(zhenRows, 2 * i, average.ToString());
+                sNeed.Append(average);
+                strWrite_zyr(sNeed.ToString(), Environment.CurrentDirectory + "\\bin", "channelData.txt");
+                sNeed.Clear();
+            }
+            zhenRows++;
+        }
+
+        public double Var_zyr(double[] v)
+        {
+            double sum1 = 0;
+            for (int i = 0; i < v.Length; i++)
+            {
+                double temp = v[i] * v[i];
+                sum1 = sum1 + temp;
+            }
+
+            double sum = 0;
+            foreach (double d in v)
+            {
+                sum = sum + d;
+            }
+            double var = sum1 / v.Length - (sum / v.Length) * (sum / v.Length);
+            return var;
+        }
+        private int rowCount = 0;
+        private void strWrite_zyr(string str, string filePath, string fileName)
+        {
+
+            if (!Directory.Exists(filePath))
+                Directory.CreateDirectory(filePath);
+            if (!File.Exists(filePath + "\\" + fileName))
+                File.Create(filePath + "\\" + fileName).Close(); //.Close 很关键，不然会有问题
+            if (rowCount < 3600)
+            {
+                StreamWriter sw = new StreamWriter(filePath + "\\" + fileName, true);//true 追加数据
+                sw.WriteLine(str);
+                sw.Close();
+                rowCount++;
+            }
+            else
+            {
+                StreamWriter sw = new StreamWriter(filePath + "\\" + fileName, false);
+                sw.WriteLine(str);
+                sw.Close();
+                rowCount = 0;
+            }
+        }
+        #endregion 
+        private void strWrite(string str, string filePath, string fileName)
+        {
+            if (!Directory.Exists(filePath))
+                Directory.CreateDirectory(filePath);
+            if (!File.Exists(filePath + "\\" + fileName))
+                File.Create(filePath + "\\" + fileName).Close(); //.Close 很关键，不然会有问题
+
+            //方法一
+            StreamWriter sw = new StreamWriter(filePath + "\\" + fileName, true);
+            sw.WriteLine(str);
+            sw.Close();
+
+            //方法2
+           /* string path = "D\1.txt";//文件的路径，保证文件存在。
+            FileStream fs = new FileStream(path, FileMode.Append);
+            SteamWriter sw = new StreamWriter(fs);
+            sw.WriteLine(要追加的内容);
+            sw.Close();
+            fs.Close();*/
+        }
+
+       
         /// <summary>
         /// 字符串转16进制Byte字节
         /// </summary>
         /// <param name="hexString">输入字符串</param>
         /// <returns>转化的Byte字节</returns>
-        private byte[] strToToHexByte(string hexString)
+        public static byte[] strToToHexByte(string hexString)
         {
             hexString = hexString.Replace("-", "");
             if ((hexString.Length % 2) != 0)

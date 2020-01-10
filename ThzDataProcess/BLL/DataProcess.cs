@@ -115,7 +115,8 @@ namespace BLL
             }
 
             UdpClient client = new UdpClient(new IPEndPoint(IPAddress.Any, 9001));
-            IPAddress remoteIP = IPAddress.Parse("255.255.255.255");  //以广播方式发送
+           // IPAddress remoteIP = IPAddress.Parse("255.255.255.255");  //以广播方式发送
+            IPAddress remoteIP = IPAddress.Parse("192.168.1.255");
             int remotePort = 8008;
             IPEndPoint remotePoint = new IPEndPoint(remoteIP, remotePort);
 
@@ -184,9 +185,9 @@ namespace BLL
         object ThreadLock = new object();                           //线程锁
 
         public Action<Bitmap, string[], double[], bool, bool> ShowEvent;
-        public Action<int, int, string> ShowEvent_zyr1;
-        public Action<string> ShowEvent_zyr2;
-        public Action<int,Double> ShowEvent_zyr3;
+        public Action<string, string, string, int> ShowEvent_zyr1;
+        public Action<double, int> ShowEvent_zyr2;
+       // public Action<int,Double> ShowEvent_zyr3;
         //MainForm mf = new MainForm();
 
 
@@ -270,7 +271,7 @@ namespace BLL
                 //IPAddress remoteIP = IPAddress.Parse("255.255.255.255");                                      //广播
 
 
-                UdpClient client = new UdpClient(new IPEndPoint(IPAddress.Parse("192.168.1.119"), 8009));   //本机端口 一般UdpClient client = new UdpClient();
+                UdpClient client = new UdpClient(new IPEndPoint(IPAddress.Parse("192.168.1.119"), localPort));   //本机端口 一般UdpClient client = new UdpClient();
                 IPAddress remoteIP = IPAddress.Parse(deviceIp);                                                   //远程IP
                 int remotePort = devicePort;                                                                   //远程端口
                 IPEndPoint endpoint = new IPEndPoint(remoteIP, remotePort);                                 //远程IP和端口
@@ -584,7 +585,7 @@ namespace BLL
         /// <param name="PackageNum">PackageNum</param>
         void DataDecode(List<Byte[]> GetTask, ref List<Byte[]> listBuff, ref THZData frame)
         {
-            int PackageNum = 21;
+            int PackageNum = 25;
             //if (listBuff.Count >= 100)
             //{
             //    listBuff.Clear();
@@ -664,8 +665,8 @@ namespace BLL
                     if (Zhendata[0].Count() != 1420)//第一包不是1420则退出
                         continue;
 
-                    dc.tempartureData_zyr(Zhendata, ShowEvent_zyr2);
-                    dc.adDataCaculate_zyr(Zhendata, ShowEvent_zyr1,ShowEvent_zyr3);
+                    //dc.tempartureData_zyr(Zhendata, ShowEvent_zyr2);
+                    dc.adDataCaculate_zyr(Zhendata, ShowEvent_zyr1,ShowEvent_zyr2);
 
                     foreach (Byte[] match in Zhendata)  //每次取出一个包也就是1420字节，取一帧的数据
                         sNeed.Append(BitConverter.ToString(match).Replace("-", "").Substring(20).ToUpper());
@@ -768,24 +769,24 @@ namespace BLL
      }*/
         #region mycode_zyr
         // DataProcess dp = null;
-        public void tempartureData_zyr(List<byte[]> Zhendata)
-        {
-            StringBuilder sNeed = new StringBuilder();
+        //public void tempartureData_zyr(List<byte[]> Zhendata)
+        //{
+        //    StringBuilder sNeed = new StringBuilder();
 
-            foreach (Byte[] match in Zhendata)
-                sNeed.Append(BitConverter.ToString(match).Replace("-", "").Substring(20).ToUpper());
-            double[] temparture = GetTemparture_zyr(sNeed.ToString());
-            // mf.ShowlbDevTem(string.Format("设备温度：\nT1:{0:N}°\nT2:{1:N}°\nT3:{2:N}°\nT4:{3:N}°", temparture[0], temparture[1], temparture[2], temparture[3]));
-            ShowEvent_zyr2(string.Format("设备温度：\nT1:{0:N}°\nT2:{1:N}°\nT3:{2:N}°\nT4:{3:N}°", temparture[0], temparture[1], temparture[2], temparture[3]));
-           // dp.callBack_zyr2(string.Format("设备温度：\nT1:{0:N}°\nT2:{1:N}°\nT3:{2:N}°\nT4:{3:N}°", temparture[0], temparture[1], temparture[2], temparture[3]));
-            sNeed.Clear();
-            foreach (var tem in temparture)
-                sNeed.Append(tem + "***");
-            strWrite_zyr(sNeed.ToString(), Environment.CurrentDirectory + "\\bin", "tempartureData.txt");
-            sNeed.Clear();
+        //    foreach (Byte[] match in Zhendata)
+        //        sNeed.Append(BitConverter.ToString(match).Replace("-", "").Substring(20).ToUpper());
+        //    double[] temparture = GetTemparture_zyr(sNeed.ToString());
+        //    // mf.ShowlbDevTem(string.Format("设备温度：\nT1:{0:N}°\nT2:{1:N}°\nT3:{2:N}°\nT4:{3:N}°", temparture[0], temparture[1], temparture[2], temparture[3]));
+        //    ShowEvent_zyr2(string.Format("设备温度：\nT1:{0:N}°\nT2:{1:N}°\nT3:{2:N}°\nT4:{3:N}°", temparture[0], temparture[1], temparture[2], temparture[3]));
+        //   // dp.callBack_zyr2(string.Format("设备温度：\nT1:{0:N}°\nT2:{1:N}°\nT3:{2:N}°\nT4:{3:N}°", temparture[0], temparture[1], temparture[2], temparture[3]));
+        //    sNeed.Clear();
+        //    foreach (var tem in temparture)
+        //        sNeed.Append(tem + "***");
+        //    strWrite_zyr(sNeed.ToString(), Environment.CurrentDirectory + "\\bin", "tempartureData.txt");
+        //    sNeed.Clear();
 
 
-        }
+        //}
 
         public double[] GetTemparture_zyr(string str)
         {
@@ -816,7 +817,7 @@ namespace BLL
             return Temparture;
         }
         int zhenRows = 0;
-        public void adDataCaculate_zyr(List<byte[]> Zhendata)
+       /* public void adDataCaculate_zyr(List<byte[]> Zhendata)
         {
             byte[] byteData = new byte[35250];//1410*25
             int count1 = 0, count2 = 0;
@@ -866,7 +867,7 @@ namespace BLL
                 sNeed.Clear();
             }
             zhenRows++;
-        }
+        }*/
 
         public double Var_zyr(double[] v)
         {

@@ -16,6 +16,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Windows.Forms.DataVisualization.Charting;
 
+
 namespace ThzDataProcess
 {
     public partial class MainForm : DevComponents.DotNetBar.Office2007Form
@@ -27,52 +28,124 @@ namespace ThzDataProcess
         DataProcess DPBLL = null;
         object ThreadLock = new object();
 
-        private Queue<double> dataQueue = new Queue<double>(100);
-       
-
+        private Queue<double>[] dataQueue = new Queue<double>[8];//把Queue<double>看成一个类型 int[] a=new int [8]
         public MainForm()
         {
+            this.DoubleBuffered = true;//设置本窗体
+            SetStyle(ControlStyles.UserPaint, true);
+            SetStyle(ControlStyles.AllPaintingInWmPaint, true); // 禁止擦除背景.
+            SetStyle(ControlStyles.DoubleBuffer, true); // 双缓冲
+
+
             this.EnableGlass = false;
             InitializeComponent();
-           // Control.CheckForIllegalCrossThreadCalls = false;
-            //CheckForIllegalCrossThreadCalls = false;
-            dataGridViewInit();
-            InitChart();
 
-            string DeviceIP = "192.168.1.110";
-            int LocalPort = 8008;
+            InitChart();
+            string DeviceIP = "192.168.1.120";
+            int LocalPort = 8009;
             DPBLL = new DataProcess(DeviceIP, LocalPort);
 
-            // richTextBox1.Text = "111";
-            //listBoxAdv1.Items.Add(6);
-            //listBoxAdv1.Items.Add(8);
-            comboBoxEx1.SelectedIndex = 0;
-            comboBoxEx2.SelectedIndex = 0;
-            frameRate = Int32.Parse(comboBoxEx1.SelectedItem.ToString().Replace("帧", ""));
-            channel = Int32.Parse(comboBoxEx2.SelectedItem.ToString().Replace("通道", ""));
-
-            //DataCalculate dc = new DataCalculate();
             DPBLL.ShowEvent_zyr1 = dataShow;
-            DPBLL.ShowEvent_zyr2 = ShowlbDevTem;
-            DPBLL.ShowEvent_zyr3 = chartShow;
+            DPBLL.ShowEvent_zyr2 = chartShow;
             DPBLL.Start();//启动线程
 
-            /*Thread t = new Thread(Start);
-            t.Priority = ThreadPriority.Highest;
-            t.Start();*/
+            radioButton1.Checked = true;
+            radioButton2.Checked = false;
 
-            // this.WindowState = FormWindowState.Maximized;
+            dataQueue[0] = new Queue<double>(100);
+            dataQueue[1] = new Queue<double>(100);
+            dataQueue[2] = new Queue<double>(100);
+            dataQueue[3] = new Queue<double>(100);
+            dataQueue[4] = new Queue<double>(100);
+            dataQueue[5] = new Queue<double>(100);
+            dataQueue[6] = new Queue<double>(100);
+            dataQueue[7] = new Queue<double>(100);
+
+
         }
+        // 防止闪屏        
+        protected override CreateParams CreateParams
+        {
+            get
+            {
+                CreateParams cp = base.CreateParams;
+                cp.ExStyle |= 0x02000000;
+                return cp;
+            }
+        }
+
+
 
         private void MainForm_Load(object sender, EventArgs e)
         {
+            this.WindowState = FormWindowState.Normal;
+            this.FormBorderStyle = FormBorderStyle.Sizable;
+            this.Top = 0;
+            this.Left = 0;
+            this.Width = Screen.PrimaryScreen.WorkingArea.Width;
+            this.Height = Screen.PrimaryScreen.WorkingArea.Height;
+        }
+
+        private void InitChart()
+        {
+            Chart[] ch = new Chart[8] { chart1, chart2 , chart3, chart4, chart5, chart6, chart7, chart8 };
+            for (int i = 0; i < 8; i++)
+            {
+                ch[i].ChartAreas.Clear();
+                ChartArea chartArea1 = new ChartArea("C1");
+                ch[i].ChartAreas.Add(chartArea1);
+                //定义存储和显示点的容器
+                ch[i].Series.Clear();
+                Series series1 = new Series("S1");
+                series1.ChartArea = "C1";
+                ch[i].Series.Add(series1);
+
+                ch[i].ChartAreas[0].AxisY.IsStartedFromZero = false;
+                ch[i].Legends[0].Enabled = false;
+
+                ch[i].ChartAreas[0].AxisX.Interval = 5;
+                ch[i].ChartAreas[0].AxisX.MajorGrid.LineColor = System.Drawing.Color.Silver;
+                ch[i].ChartAreas[0].AxisY.MajorGrid.LineColor = System.Drawing.Color.Silver;
+                //设置标题
+                ch[i].Titles.Clear();
+                ch[i].Titles.Add("S01");
+                ch[i].Titles[0].Text = "通道" + (i + 1) + " AD折线图显示";
+                ch[i].Titles[0].ForeColor = Color.RoyalBlue;
+                ch[i].Titles[0].Font = new System.Drawing.Font("Microsoft Sans Serif", 12F);
+                //设置图表显示样式
+                ch[i].Series[0].Color = Color.Red;
+                //this.chart1.Titles[0].Text = string.Format("{0}折线图显示", );
+                ch[i].Series[0].ChartType = SeriesChartType.Line;
+                ch[i].Series[0].Points.Clear();
+            }
+        }
+        public void chartShow( Double y,int ch)
+        {
+
+            Chart[] chNum = new Chart[8] { chart1, chart2, chart3, chart4, chart5, chart6, chart7, chart8 };
+            if(ch <= 8)
+               chartDisplay(chNum[ch-1], ch, y);
 
         }
-        public void ShowThread(string name)
+        delegate void ChartDelegate(Chart chart, int ch, Double y);
+        private void chartDisplay(Chart chart, int ch, Double y)
         {
-           MessageBox.Show(name.ToString());
-           // richTextBox1.Text = "123456";
 
+            if (chart.InvokeRequired)
+            {
+                ChartDelegate chartDelegate = chartDisplay;
+                chart.Invoke(chartDelegate, new object[] { chart, ch, y });
+            }
+            else
+            {
+                if ( isStart == true )
+                    UpdateQueueValue(ch,y);
+                chart.Series[0].Points.Clear();
+                // for (int j = 0; j < 100; j++)
+                //     chart1.Series[0].Points.AddXY(j, y);
+                for (int i = 0; i < dataQueue[ch-1].Count; i++)
+                    chart.Series[0].Points.AddXY((i + 1), dataQueue[ch-1].ElementAt(i));
+            }
         }
 
         private void btnStart_Click(object sender, EventArgs e)
@@ -80,7 +153,7 @@ namespace ThzDataProcess
             if (!isStart)
             {
                 Command.CommandUp_v1(frameRate);
-                btnStart.Text = @"终止";
+                btnStart.Text = @"停止采集";
                 btnStart.DisabledImage = btnStart.Image;
                 btnStart.Image = (Image)btnStart.PressedImage.Clone();
                 isStart = !isStart;
@@ -89,173 +162,90 @@ namespace ThzDataProcess
             else
             {
                 Command.CommandUp_v1(0);
-                btnStart.Text = @"启动";
+                btnStart.Text = @"开始采集";
                 btnStart.Image = btnStart.DisabledImage;
                 isStart = !isStart;
             }
         }
 
-        private void comboBoxEx1_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            frameRate = Int32.Parse(comboBoxEx1.SelectedItem.ToString().Replace("帧", ""));
-            //MessageBox.Show(frameRate.ToString());
-        }
-        private void comboBoxEx2_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            channel = Int32.Parse(comboBoxEx2.SelectedItem.ToString().Replace("通道", ""));
-            dataQueue.Clear();
-        }
-
-        private void dataGridViewInit()
-        {
-            DataTable dt1 = new DataTable();
-            for (int i = 1; i < 37; i++)
-            { 
-               dt1.Columns.Add("CH" + i + "_AVG"); dt1.Columns.Add("CH" + i + "_VAR");
-             }
-            for (int i=0;i< 30;i++)
-               dt1.Rows.Add("");
-            dataGridViewX1.DataSource = dt1;
-            
-
-        }
-        
-        public void dataShow(int row,int column,string str)
-        {
-            row = row % 30;
-            ShowMessage(dataGridViewX1, str,row, column);
-           
-        }
-
-        
-        delegate void ShowMessageDelegate(DataGridView dg, string message, int row, int column);
-        private void ShowMessage(DataGridView dg, string message, int row, int column)
-        {
-            if (dg.InvokeRequired)
-            {
-                ShowMessageDelegate showMessageDelegate = ShowMessage;
-                dg.Invoke(showMessageDelegate, new object[] { dg, message ,row ,column});
-            }
-            else
-            {
-                
-                dg.Rows[row].Cells[column].Value = message;
-            }
-        }
-
-        public void chartShow(int ch,Double y)
-        {
-            
-
-            chartDisplay(chart1, ch,y);
-
-        }
-        delegate void ChartDelegate(Chart chart,int ch,  Double y);
-        private void chartDisplay(Chart chart, int ch, Double y)
-        {
-            if (chart.InvokeRequired)
-            {
-                ChartDelegate chartDelegate = chartDisplay;
-                chart.Invoke(chartDelegate, new object[] { chart, ch, y });
-            }
-            else
-            {
-                if (ch == channel&& isStart1==true)
-                    UpdateQueueValue(y);
-                this.chart1.Series[0].Points.Clear();
-                // for (int j = 0; j < 100; j++)
-                //     chart1.Series[0].Points.AddXY(j, y);
-                for (int i = 0; i < dataQueue.Count; i++)
-                    this.chart1.Series[0].Points.AddXY((i + 1), dataQueue.ElementAt(i));
-            }
-        }
-
-        private void UpdateQueueValue(Double y)
+        private void UpdateQueueValue(int ch,Double y)
         {
 
-           if (dataQueue.Count > 100)
+            if (dataQueue[ch-1].Count > 100)
                 //先出列
-                    dataQueue.Dequeue();
-          dataQueue.Enqueue(y);
+                dataQueue[ch-1].Dequeue();
+            dataQueue[ch-1].Enqueue(y);
 
 
         }
-
-        public delegate void SWTDelegate(string AddStr);
-        //public delegate void ComsumerTextDelegate(int Index, string AddStr);
-        public void ShowlbDevTem(string AddStr)
+        private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
         {
-            if (lbDevTem.InvokeRequired)
+            Command.CommandUp_v1(0);
+        }
+
+        public void dataShow(string avg, string stdDev, string maxMin, int ch)
+        {
+            double temperatureSensitivity = 0.0;
+            double dValue = 0.0,temp1=0.0, temp2 = 0.0, tempV1 = 0.0, tempV2 = 0.0;
+
+            //ShowMessage(dataGridViewX1, str, row, column);
+            Label[] lb = new Label[48] { label_1,label_2,label_3,label_4,label_5, label_6, label_7, label_8, label_9, label_10 , label_11, label_12, label_13, label_14, label_15,label_16,
+                                         label_17,label_18,label_19,label_20,label_21, label_22, label_23, label_24, label_25, label_26 , label_27, label_28, label_29, label_30, label_31,label_32,
+                                         label_33,label_34,label_35,label_36,label_37, label_38, label_39, label_40, label_41, label_42 , label_43, label_44, label_45, label_46, label_47,label_48 };
+
+            if (ch <= 8 && isStart == true)
             {
-                SWTDelegate pd = new SWTDelegate(ShowlbDevTem);
-                lbDevTem.Invoke(pd, new object[] { AddStr });
+                if (radioButton1.Checked == true)
+                {
+
+                    ShowMessage(lb[(ch - 1) * 6], "V1 ： " + avg);
+                    ShowMessage(lb[(ch - 1) * 6 + 1], "σ1 ： " + stdDev);
+                    ShowMessage(lb[(ch - 1) * 6 + 2], "Max/Min ：" + maxMin);
+                
+                }
+                else
+                {
+                    ShowMessage(lb[(ch - 1) * 6 + 3], "V2 ： " + avg);
+                    ShowMessage(lb[(ch - 1) * 6 + 4], "σ2 ： " + stdDev);
+                    ShowMessage(lb[(ch - 1) * 6 + 2], "Max/Min ：" + maxMin);
+                }
+
+                if (textBox1.Text != "" && textBox2.Text != "")
+                {
+                    dValue = Math.Abs(Convert.ToDouble(textBox1.Text) - Convert.ToDouble(textBox2.Text));
+                    temp1 = Convert.ToDouble(lb[(ch - 1) * 6 + 1].Text.Substring(5, lb[(ch - 1) * 6 + 1].Text.Length - 5));
+                    temp2 = Convert.ToDouble(lb[(ch - 1) * 6 + 4].Text.Substring(5, lb[(ch - 1) * 6 + 4].Text.Length - 5));
+                    tempV1 = Convert.ToDouble(lb[(ch - 1) * 6].Text.Substring(5, lb[(ch - 1) * 6].Text.Length - 5));
+                    tempV2 = Convert.ToDouble(lb[(ch - 1) * 6 + 3].Text.Substring(5, lb[(ch - 1) * 6 + 3].Text.Length - 5));
+                    if (tempV1 - tempV2 != 0)
+                        temperatureSensitivity = (temp1 + temp2) * dValue / Math.Abs(tempV1 - tempV2) / 2.0;
+                    ShowMessage(lb[(ch - 1) * 6 + 5], "ΔT ：" + temperatureSensitivity.ToString("0.00"));
+                }
+
             }
             else
             {
-                lbDevTem.Text = AddStr;
-                //richTextBox1.AppendText(AddStr);
+                ;
             }
-        }
-
-
-        private void dataGridViewX1_RowsAdded(object sender, DataGridViewRowsAddedEventArgs e)
-        {
-            for (int i = 0; i < dataGridViewX1.Rows.Count; i++)
-                this.dataGridViewX1.Rows[i].HeaderCell.Value = (i + 1).ToString();
         }
 
        
-        private void InitChart()
-        {
-            //定义图表区域
-            this.chart1.ChartAreas.Clear();
-            ChartArea chartArea1 = new ChartArea("C1");
-            this.chart1.ChartAreas.Add(chartArea1);
-            //定义存储和显示点的容器
-            this.chart1.Series.Clear();
-            Series series1 = new Series("S1");
-            series1.ChartArea = "C1";
-            this.chart1.Series.Add(series1);
-            //设置图表显示样式
-            this.chart1.ChartAreas[0].AxisY.Minimum = 0;
-            this.chart1.ChartAreas[0].AxisY.Maximum = 100;
-            this.chart1.ChartAreas[0].AxisX.Interval = 5;
-            this.chart1.ChartAreas[0].AxisX.MajorGrid.LineColor = System.Drawing.Color.Silver;
-            this.chart1.ChartAreas[0].AxisY.MajorGrid.LineColor = System.Drawing.Color.Silver;
-            //设置标题
-            this.chart1.Titles.Clear();
-            this.chart1.Titles.Add("S01");
-            this.chart1.Titles[0].Text = "AD折线图显示";
-            this.chart1.Titles[0].ForeColor = Color.RoyalBlue;
-            this.chart1.Titles[0].Font = new System.Drawing.Font("Microsoft Sans Serif", 12F);
-            //设置图表显示样式
-            this.chart1.Series[0].Color = Color.Red;
-          
-            //this.chart1.Titles[0].Text = string.Format("{0}折线图显示", );
-            this.chart1.Series[0].ChartType = SeriesChartType.Line;
-            
-           
-            this.chart1.Series[0].Points.Clear();
-        }
 
-        private void btnStart1_Click(object sender, EventArgs e)
+        delegate void ShowMessageDelegate(Label lbl, string message);
+        private void ShowMessage(Label lbl, string message)
         {
-            if (!isStart1)
+            if (lbl.InvokeRequired)
             {
-                this.timer1.Start();
-                btnStart1.Text = @"终止";
-                btnStart1.DisabledImage = btnStart1.Image;
-                btnStart1.Image = (Image)btnStart1.PressedImage.Clone();
-                isStart1 = !isStart1;
-
+                ShowMessageDelegate showMessageDelegate = ShowMessage;
+                lbl.Invoke(showMessageDelegate, new object[] { lbl, message});
             }
             else
             {
-                this.timer1.Stop();
-                btnStart1.Text = @"启动";
-                btnStart1.Image = btnStart1.DisabledImage;
-                isStart1 = !isStart1;
+
+                lbl.Text = message;
             }
         }
+
+       
     }
 }

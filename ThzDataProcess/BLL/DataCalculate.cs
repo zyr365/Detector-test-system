@@ -70,14 +70,17 @@ namespace BLL
             return Temparture;
         }
         int zhenRows = 0;
-        public void adDataCaculate_zyr(List<byte[]> Zhendata, Action<int, int, string> ShowEvent_zyr1, Action<int,Double> ShowEvent_zyr3)
+        public void adDataCaculate_zyr(List<byte[]> Zhendata, Action<string, string, string,int> ShowEvent_zyr1, Action<double,int> ShowEvent_zyr2)
         {
-            byte[] byteData = new byte[35250];//1410*25
+            //byte[] byteData = new byte[35250];//1410*25
+           
             int count1 = 0, count2 = 0,sampleCount=0;
             StringBuilder sNeed = new StringBuilder();
+            StringBuilder sNeed1 = new StringBuilder();
             //MainForm mf = new MainForm();
 
             sampleCount = Zhendata[0][28] * 256 + Zhendata[0][29];
+            byte[] byteData = new byte[Zhendata.Count()* 1410];//1410*44
             foreach (Byte[] Package in Zhendata)
             {
                 count1 = 0;
@@ -95,33 +98,70 @@ namespace BLL
             }
             // Console.ReadKey();
             double[] channel = new double[sampleCount];//473、465
-            double variance = 0.0, average = 0.0;
+            double[] channel1 = new double[sampleCount];
+            double variance = 0.0, average_original = 0.0 , average_converted = 0.0,stdDev = 0.0,maxNum= 0.0,minNum = 0.0;
             for (int i = 0; i < 36; i++)
             {
                 for (int j = 0; j < sampleCount; j++)
                 {
-                    byte bigByte = Convert.ToByte(byteData[j * 74 + i * 2].ToString("X"), 16);
+                    byte bigByte = Convert.ToByte(byteData[j * 74 + i * 2 + 40].ToString("X"), 16);
                     if ((bigByte & 0xf0) >> 4 == 15)
-                        channel[j] = -(~byteData[j * 74 + i * 2 + 30] + 1 + 256.0 * ~byteData[j * 74 + i * 2 + 31]) / 8192.0*10.0;//2^12 =4096
+                    {
+                        channel[j] = -(~byteData[j * 74 + i * 2 + 41] + 1 + 256.0 * ~byteData[j * 74 + i * 2 + 40]) / 8192.0 * 5;//2^12 =4096
+                        channel1[j] = -(~byteData[j * 74 + i * 2 + 41] + 1 + 256.0 * ~byteData[j * 74 + i * 2 + 40]);
+                    }
                     else
-                        channel[j] = (byteData[j * 74 + i * 2 + 30] + 256.0 * ~byteData[j * 74 + i * 2 + 31]) / 8192.0*10.0;
+                    {
+                        channel[j] = (byteData[j * 74 + i * 2 + 41] + 256.0 * byteData[j * 74 + i * 2 + 40]) / 8192.0 * 5;
+                        channel1[j] = (byteData[j * 74 + i * 2 + 41] + 256.0 * byteData[j * 74 + i * 2 + 40]) ;
+                    }
                     sNeed.Append(channel[j] + ",");
+                    sNeed1.Append(channel1[j] + ",");
                 }
-                variance = Var_zyr(channel);
-                //mf.dataShow(zhenRows, 2 * i + 1, variance.ToString());
-                 ShowEvent_zyr1(zhenRows, 2 * i + 1, variance.ToString());
-                //dp.callBack_zyr1(zhenRows, 2 * i + 1, variance.ToString());
-                sNeed.Append("***variance:" + variance + "***average:");
-                average = channel.Average();
-                // mf.dataShow(zhenRows, 2 * i , average.ToString());
-                 ShowEvent_zyr1(zhenRows, 2 * i, average.ToString());
-                 ShowEvent_zyr3(i,average);
-                //dp.callBack_zyr1(zhenRows, 2 * i, average.ToString());
-                sNeed.Append(average);
-                strWrite_zyr(sNeed.ToString(), Environment.CurrentDirectory + "\\bin", "channelData.txt");
-                sNeed.Clear();
+
+                Stopwatch elapsetime = new Stopwatch();
+                elapsetime.Start();
+
+
+                stdDev = CalculateStdDev(channel)*1000;//标准差
+                average_converted = channel.Average()*1000;
+                maxNum = channel.Max()*1000;
+                minNum = channel.Min()*1000;
+                average_original = channel.Average();
+
+                ShowEvent_zyr1(average_converted.ToString("0.00"), stdDev.ToString("0.00") ,maxNum.ToString("0.00")+"/"+minNum.ToString("0.00"),i+1);
+                ShowEvent_zyr2(average_original, i+1);
+
+                elapsetime.Stop();
+                Console.WriteLine(elapsetime.ElapsedMilliseconds.ToString("000"));
+
+                //variance = Var_zyr(channel);//方差
+                // ShowEvent_zyr1(zhenRows, 2 * i + 1, variance.ToString());
+                //sNeed.Append("***variance:" + variance + "***average:");
+
+                //ShowEvent_zyr1(zhenRows, 2 * i, average.ToString());
+                // ShowEvent_zyr3(i+1,average);
+                //sNeed.Append(average);
+                //strWrite_zyr(sNeed.ToString(), Environment.CurrentDirectory + "\\bin", "channelData.txt");
+                //sNeed.Clear();
             }
             zhenRows++;
+        }
+
+       // private static double CalculateStdDev(IEnumerable<double> values)
+             private static double CalculateStdDev(double[] values)
+        {
+            double ret = 0;
+            if (values.Count() > 0)
+            {
+                //  计算平均数   
+                double avg = values.Average();
+                //  计算各数值与平均数的差值的平方，然后求和 
+                double sum = values.Sum(d => Math.Pow(d - avg, 2));
+                //  除以数量，然后开方
+                ret = Math.Sqrt(sum / values.Count());
+            }
+            return ret;
         }
 
         public double Var_zyr(double[] v)
